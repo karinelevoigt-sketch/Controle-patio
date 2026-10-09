@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#173c35">
+<title>Controle do Pátio</title>
+<style>
+:root{--ink:#172b27;--muted:#64736f;--line:#d9e2de;--paper:#f4f7f5;--card:#fff;--green:#173c35;--green2:#dcebe5;--red:#b42332;--redbg:#fff0f1;--amber:#8a5a00}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--green);color:white;padding:18px 16px 16px;position:sticky;top:0;z-index:5;box-shadow:0 2px 8px #102b2520}
+header h1{font-size:21px;margin:0 0 3px}header p{margin:0;font-size:12px;opacity:.85}
+main{max-width:760px;margin:auto;padding:14px 12px 92px}
+.nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:14px}
+button,.btn{font:inherit;border:1px solid var(--line);border-radius:12px;background:white;color:var(--ink);padding:11px 12px;cursor:pointer;min-height:44px}
+button:active{transform:scale(.99)}button.primary{background:var(--green);color:white;border-color:var(--green)}button.selected{background:var(--green2);border-color:#7ca99a;font-weight:700}
+button.danger{color:var(--red);border-color:#efb7bd;background:var(--redbg)}
+button.small{padding:6px 8px;min-height:34px;font-size:13px;border-radius:9px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+h2{font-size:18px;margin:0 0 12px}h3{font-size:15px;margin:0 0 8px}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 5px}
+input,select{width:100%;padding:12px;border:1px solid #c8d4cf;border-radius:10px;background:white;color:var(--ink);font:inherit;min-height:46px}
+.field{margin-bottom:12px}.row{display:flex;gap:8px;align-items:center}.row>*{flex:1;min-width:0}
+.area-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.yard-map{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-areas:"left back right" "left open right" "gate gate gate";gap:8px;min-height:280px}
+.yard-side{display:flex;flex-direction:column;gap:7px}
+.yard-side.left{grid-area:left}.yard-side.back{grid-area:back}.yard-side.right{grid-area:right}
+.yard-side.back{display:grid;grid-template-columns:1fr 1fr;align-content:start}
+.yard-center{grid-area:open;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:12px;border:1px dashed var(--line);border-radius:12px;padding:8px}
+.yard-gate{grid-area:gate;text-align:center;border-top:3px solid #8b9d96;padding-top:5px;font-weight:800;font-size:12px;letter-spacing:2px}
+.yard-area{min-height:45px;padding:8px 3px;font-weight:800;font-size:13px;background:#edf3f0}
+.yard-area.active{background:var(--green);color:white;border-color:var(--green)}
+.block-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.block-btn{display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;min-height:68px;padding:7px 4px}
+.block-btn .count{font-size:11px;color:var(--muted)}
+.pile{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+.level{display:flex;gap:10px;align-items:center;text-align:left;width:100%;padding:10px;border-radius:10px;min-height:58px}
+.level .num{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;background:#edf1ef;font-weight:800;flex-shrink:0}
+.level .info{flex:1;min-width:0}.level .code{font-weight:700;overflow-wrap:anywhere}.level .sub{font-size:12px;color:var(--muted)}
+.level.occupied{background:#e7f2ed;border-color:#b4d2c5}.level.pending{background:var(--redbg);border-color:#e9a7af}.level.selected{background:#dcecff;border:2px solid #3b82f6}.level.hole{background:#fff0f0;border:2px solid #c62828;color:#9f1d1d}.level:disabled{opacity:1;color:var(--ink)}
+.note{font-size:12px;color:var(--muted)}.empty{padding:16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px}
+.result{padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:white}
+.result strong{overflow-wrap:anywhere}.pill{display:inline-block;font-size:11px;border-radius:99px;padding:3px 8px;background:#e7f2ed;margin-left:4px}.pill.red{background:var(--redbg);color:var(--red)}
+.warning{background:#fff6df;border:1px solid #ecd49a;padding:10px;border-radius:10px;font-size:13px;color:#684700;margin-bottom:12px}
+footer{position:fixed;bottom:0;left:0;right:0;background:#ffffffed;border-top:1px solid var(--line);padding:8px 12px calc(8px + env(safe-area-inset-bottom));text-align:center;font-size:11px;color:var(--muted);backdrop-filter:blur(8px)}
+.hidden{display:none!important}
+@media print{header,.nav,footer,button,.field,.row,.warning{display:none!important}body{background:white}.panel{border:0;break-inside:avoid}main{padding:0}.hidden{display:none!important}#page-listagem{display:block!important}}
+@media(min-width:600px){.block-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.area-grid{grid-template-columns:repeat(7,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header><h1>📦 Controle do Pátio</h1><p>Versão de teste 7 · carregamento por voz com confirmação</p></header>
+<main>
+<div class="warning"><strong>Atenção:</strong> esta versão salva os dados localmente neste aparelho/navegador. Não limpe os dados do navegador nem desinstale o ambiente sem exportar uma cópia. Ainda não é um sistema publicado nem sincronizado.</div>
+<nav class="nav" aria-label="Menu principal">
+<button class="selected" data-page="mapa">🗺️ Mapa</button><button data-page="entrada">＋ Entrada</button><button data-page="pesquisa">⌕ Pesquisar</button>
+<button data-page="pendentes">🔴 Pendentes <span id="pendingCount"></span></button><button data-page="saida">🚚 Saída</button><button data-page="relatorio">▤ Relatório</button>
+<button data-page="listagem">📋 Listagem</button><button data-page="limpeza">🧹 Limpar dados</button>
+</nav>
+<section id="page-mapa">
+<div class="panel"><h2>Mapa geral do pátio</h2><p class="note">Toque na área do desenho para abrir os blocos dela.</p><div id="yardMap" class="yard-map"></div></div>
+<div class="panel"><h2>1. Escolha a área</h2><div class="area-grid" id="areaGrid"></div></div>
+<div class="panel hidden" id="moveBanner"><strong>Movimentar container</strong><p id="moveBannerText" class="note"></p><button class="small" id="cancelMove">Cancelar movimentação</button></div>
+<div class="panel"><div class="row"><h2 id="blockHeading">Área E1 · Blocos</h2><span class="note" style="text-align:right">Até 15 blocos</span></div><div class="block-grid" id="blockGrid"></div></div>
+<div class="panel"><h2 id="pileHeading">Pilha selecionada</h2><div class="note" id="pileNote"></div><div id="pile" class="pile"></div></div>
+</section>
+<section id="page-entrada" class="hidden">
+<div class="panel"><h2>Entrada de container</h2>
+<p class="note">Você pode falar o código e a área. O sistema sugere a primeira posição livre seguindo a ordem dos boxes e suas alturas programadas, e pede confirmação antes de cadastrar.</p>
+<button class="primary" id="startVoiceEntry" style="width:100%;margin-bottom:10px">🎙️ Falar entrada</button>
+<div id="voiceEntryStatus" class="result" aria-live="polite">Exemplo: “Adicionar container FWRU 0354947, posição F1”.</div>
+<div class="field"><label for="voiceEntryTranscript">Texto reconhecido (corrija se necessário)</label><input id="voiceEntryTranscript" placeholder="O texto reconhecido aparecerá aqui"></div>
+<button id="prepareVoiceEntry" style="width:100%;margin-bottom:12px">Preparar entrada</button>
+<div id="voiceEntryPreview" class="result hidden"></div>
+<button class="primary hidden" id="confirmVoiceEntry" style="width:100%;margin-top:10px">Confirmar entrada por voz</button>
+<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+<h3>Ou cadastrar manualmente</h3>
+<div class="field"><label for="newCode">Código do container</label><input id="newCode" autocomplete="off" placeholder="Digite o código da lateral"></div>
+<p class="note">2. Toque na área do desenho do pátio.</p><div id="entryMap" class="yard-map"></div>
+<div class="result" id="entrySelection">Escolha uma área no mapa.</div>
+<h3 id="entryBlocksHeading">3. Escolha o bloco</h3><div id="entryBlockGrid" class="block-grid"></div>
+<h3 id="entryPileHeading">4. Toque numa altura livre</h3><p class="note">A altura 1 fica embaixo. O bloco 1 aceita até 3 containers de altura; os demais, até 4.</p><div id="entryPile" class="pile"></div>
+<div id="entryMessage"></div>
+<button class="primary" id="saveEntry" style="width:100%;margin-top:12px">Confirmar entrada</button>
+<div style="display:none"><select id="entryArea"></select><select id="entryBlock"></select><select id="entryLevel"></select></div>
+</div></section>
+<section id="page-pesquisa" class="hidden"><div class="panel"><h2>Pesquisar container</h2><div class="field"><label for="searchCode">Digite o código completo ou parte dele</label><input id="searchCode" placeholder="Ex.: RXTU455" autocomplete="off"></div><div id="searchResults"></div></div></section>
+<section id="page-pendentes" class="hidden"><div class="panel"><h2>Containers pendentes</h2><p class="note">Containers retirados temporariamente e ainda sem posição definitiva.</p><div id="pendingList"></div></div></section>
+<section id="page-listagem" class="hidden"><div class="panel"><h2>Listagem de containers no pátio</h2><p class="note">Relação dos containers atualmente cadastrados como presentes no pátio, ordenados por área, bloco e altura.</p><div class="field"><label for="listFilter">Filtrar por código ou área</label><input id="listFilter" placeholder="Ex.: RXTU, E1, D1"></div><div class="row"><button id="printList">Imprimir / salvar como PDF</button><button id="exportList">Exportar listagem CSV</button></div><div id="containerList"></div></div></section>
+<section id="page-saida" class="hidden"><div class="panel"><h2>Carregar / registrar saída</h2>
+<p class="note">Fale o comando e confira os dados antes de confirmar. Destino e placa são opcionais no comando por voz.</p>
+<button class="primary" id="startVoiceExit" style="width:100%;margin-bottom:10px">🎙️ Falar carregamento</button>
+<div id="voiceStatus" class="result" aria-live="polite">Exemplo: “Container CSCHSU 8075213 carregado, destino São Paulo, placa ABC1D23”.</div>
+<div class="field"><label for="voiceTranscript">Texto reconhecido (você pode corrigir antes de preparar)</label><input id="voiceTranscript" placeholder="O texto reconhecido aparecerá aqui"></div>
+<button id="prepareVoiceExit" style="width:100%;margin-bottom:12px">Preparar confirmação</button>
+<div id="voicePreview" class="result hidden"></div>
+<button class="primary hidden" id="confirmVoiceExit" style="width:100%;margin-top:10px">Confirmar carregamento</button>
+<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+<h3>Ou registrar manualmente</h3>
+<div class="field"><label for="exitCode">Código do container</label><input id="exitCode" placeholder="Digite o código"></div>
+<div class="field"><label for="truckPlate">Placa do caminhão (opcional)</label><input id="truckPlate" placeholder="Ex.: ABC1D23"></div>
+<div class="field"><label for="destination">Destino (opcional)</label><input id="destination" placeholder="Destino do container"></div>
+<button class="primary" id="doExit" style="width:100%">Confirmar saída manual</button><div id="exitMessage"></div></div></section>
+<section id="page-relatorio" class="hidden"><div class="panel"><h2>Relatórios</h2><div class="field"><label for="reportType">Tipo de relatório</label><select id="reportType"><option value="Saída">1 · Relatório de saídas</option><option value="Movimentação">2 · Relatório de movimentações</option><option value="Entrada">3 · Relatório de entradas</option><option value="Pendente">4 · Containers retirados / pendentes</option><option value="Pendência resolvida">5 · Pendências resolvidas</option><option value="Todos">6 · Relatório completo do dia</option></select></div><div class="row"><div class="field"><label for="reportDate">Data</label><input id="reportDate" type="date"></div><button id="showReport" style="align-self:flex-start;margin-top:19px">Consultar</button></div><div id="reportOutput"></div><button id="exportReport" style="width:100%;margin-top:12px">Exportar relatório (.csv)</button><button id="exportData" style="width:100%;margin-top:8px">Exportar backup de dados (.json)</button><p class="note">O relatório CSV pode ser aberto em planilhas. O backup JSON contém os dados locais para guardar uma cópia de segurança.</p></div></section>
+<section id="page-limpeza" class="hidden">
+<div class="panel">
+<h2>🧹 Limpar containers de teste</h2>
+<div class="warning"><strong>Cuidado:</strong> estas ações apagam dados deste aparelho. Exporte primeiro um backup JSON na tela Relatório. Esta limpeza não pode ser desfeita.</div>
+<h3>1. Limpar uma área / quadra</h3>
+<p class="note">Escolha uma área para remover os containers ativos e as pendências que pertencem a ela. O histórico de movimentos e saídas será mantido.</p>
+<label class="field">Área que deseja limpar
+<select id="clearArea"></select>
+</label>
+<div id="clearAreaSummary" class="result"></div>
+<button id="clearAreaBtn" class="primary">Limpar somente esta área</button>
+</div>
+<div class="panel">
+<h3>2. Limpar o pátio inteiro</h3>
+<p class="note">Apaga todos os containers ativos, todas as pendências e todo o histórico de eventos. Use somente para reiniciar os testes do zero.</p>
+<div id="clearAllSummary" class="result"></div>
+<button id="clearAllBtn" style="background:#fff0f1;border-color:#c62828;color:#9f1d1d">Apagar todos os dados do pátio</button>
+</div>
+</section>
+</main>
+<footer>Versão de teste 7 • carregamento por voz com confirmação</footer>
+<script>
+const AREAS=["E1","E2","E3","E4","EV5","EV6","F1","F2","D1","D2","DV1","DV2","DV3"];
+const KEY="controlePatioLocalV1";
+let state={containers:[],events:[],pending:[]};
+let currentArea="E1",currentBlock=1;
+const $=id=>document.getElementById(id);
+const now=()=>new Date().toISOString();
+const dateLocal=iso=>{const d=new Date(iso);return d.toLocaleString("pt-BR")};
+const cap=b=>Number(b)===1?3:4;
+function load(){try{const s=localStorage.getItem(KEY);if(s)state=JSON.parse(s)}catch(e){alert("Não foi possível ler os dados salvos neste navegador.")}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));renderAll()}catch(e){alert("Falha ao salvar localmente. Verifique o espaço disponível no aparelho.")}}
+function log(type,code,from,to,details=""){state.events.push({type,code,from,to,details,at:now()})}
+function loc(area,block,level){return `${area} · Bloco ${block} · Altura ${level}`}
+function at(area,block,level){return state.containers.find(c=>c.area===area&&Number(c.block)===Number(block)&&Number(c.level)===Number(level))}
+function getCode(code){return state.containers.find(c=>c.code.toLowerCase()===code.trim().toLowerCase())}
+function hasContainerAbove(area,block,level){
+  return state.containers.some(c=>c.area===area&&Number(c.block)===Number(block)&&Number(c.level)>Number(level));
+}
+function free(area,block,level){
+  // An empty space below another container is irregular, but it is not occupied.
+  // Allow selection so the app can suggest how to reorganize the stack.
+  return !at(area,block,level)
+    && !state.pending.some(p=>p.area===area&&Number(p.block)===Number(block)&&Number(p.level)===Number(level));
+}
+function setOptions(el,items,value){el.innerHTML=items.map(x=>`<option value="${x}" ${String(x)===String(value)?"selected":""}>${x}</option>`).join("")}
+function renderAreas(){
+  const choose=a=>{currentArea=a;currentBlock=1;renderAll()};
+  $("areaGrid").innerHTML=AREAS.map(a=>`<button class="${a===currentArea?"selected":""}" data-area="${a}">${a}</button>`).join("");
+  $("areaGrid").querySelectorAll("button").forEach(b=>b.onclick=()=>choose(b.dataset.area));
+  const group=(cls,arr)=>`<div class="yard-side ${cls}">${arr.map(a=>`<button class="yard-area ${a===currentArea?"active":""}" data-yard-area="${a}">${a}</button>`).join("")}</div>`;
+  $("yardMap").innerHTML=group("left",["EV6","EV5","E4","E3","E2","E1"])+
+    `<div class="yard-side back">${["F1","F2"].map(a=>`<button class="yard-area ${a===currentArea?"active":""}" data-yard-area="${a}">${a}</button>`).join("")}</div>`+
+    group("right",["D2","D1","DV3","DV2","DV1"])+
+    `<div class="yard-center">Área central do pátio</div><div class="yard-gate">PORTÃO</div>`;
+  $("yardMap").querySelectorAll("[data-yard-area]").forEach(b=>b.onclick=()=>{if(window.pendingMoveCode)selectMoveArea(b.dataset.yardArea);else choose(b.dataset.yardArea)});
+}
+function renderBlocks(){ $("blockHeading").textContent=`Área ${currentArea} · Blocos`; $("blockGrid").innerHTML=Array.from({length:15},(_,i)=>i+1).map(b=>{let count=state.containers.filter(c=>c.area===currentArea&&Number(c.block)===b).length;let pend=state.pending.filter(p=>p.area===currentArea&&Number(p.block)===b).length;return `<button class="block-btn ${b===currentBlock?"selected":""}" data-block="${b}"><strong>Bloco ${b}</strong><span class="count">${count} container(es)${pend?` · 🔴 ${pend}`:""}</span><span class="count">Máx. ${cap(b)} alto</span></button>`}).join("");$("blockGrid").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(window.pendingMoveCode)chooseMoveBlock(Number(b.dataset.block));else{currentBlock=Number(b.dataset.block);renderAll()}})}
+function renderPile(){const max=cap(currentBlock);$("pileHeading").textContent=`${currentArea} · Bloco ${currentBlock}`;$("pileNote").textContent=`Alturas permitidas: 1 a ${max}. Vermelho = posição pendente ou espaço vazio abaixo de outro container.`;let html="";for(let n=max;n>=1;n--){let c=at(currentArea,currentBlock,n),p=state.pending.find(x=>x.area===currentArea&&Number(x.block)===currentBlock&&Number(x.level)===n),hole=!c&&!p&&hasContainerAbove(currentArea,currentBlock,n);if(c)html+=`<button class="level occupied" data-code="${esc(c.code)}"><span class="num">${n}</span><span class="info"><span class="code">${esc(c.code)}</span><br><span class="sub">Toque para movimentar ou registrar saída</span></span></button>`;else if(p)html+=`<button class="level pending" data-pending="${esc(p.code)}"><span class="num">${n}</span><span class="info"><span class="code">🔴 PENDENTE: ${esc(p.code)}</span><br><span class="sub">Posição marcada · aguardando realocação</span></span></button>`;else if(hole)html+=`<button class="level hole" data-empty="${n}"><span class="num">${n}</span><span class="info"><span class="code">🔴 ESPAÇO VAZIO ABAIXO DE CONTAINER</span><br><span class="sub">Toque para ver sugestão de reorganização</span></span></button>`;else html+=`<button class="level" data-empty="${n}"><span class="num">${n}</span><span class="info"><span class="code">Vazio</span><br><span class="sub">Toque para cadastrar nesta altura</span></span></button>`} $("pile").innerHTML=html;
+$("pile").querySelectorAll("[data-code]").forEach(b=>b.onclick=()=>containerActions(b.dataset.code));
+$("pile").querySelectorAll("[data-empty]").forEach(b=>b.onclick=()=>{if(window.pendingMoveCode){finishMoveAt(Number(b.dataset.empty));return}showPage("entrada");$("entryArea").value=currentArea;fillEntryBlocks(currentBlock);$("entryBlock").value=currentBlock;fillEntryLevels(Number(b.dataset.empty));$("entryLevel").value=b.dataset.empty}) ;
+$("pile").querySelectorAll("[data-pending]").forEach(b=>b.onclick=()=>pendingActions(b.dataset.pending));
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function containerActions(code){const c=getCode(code);if(!c)return;const choice=prompt(`Container ${c.code}\nLocal: ${loc(c.area,c.block,c.level)}\nDigite:\n1 = Mover para outra posição\n2 = Registrar saída\n3 = Marcar como pendente (retirado temporariamente)\nCancelar = voltar`);if(choice==="1")moveContainer(c);if(choice==="2"){showPage("saida");$("exitCode").value=c.code}if(choice==="3")makePending(c)}
+function moveContainer(c){
+  window.pendingMoveCode=c.code;
+  showPage("mapa");
+  $("moveBanner").classList.remove("hidden");
+  $("moveBannerText").textContent=`Escolha a área de destino para ${c.code} (origem: ${loc(c.area,c.block,c.level)}).`;
+  $("yardMap").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function selectMoveArea(a){
+  if(!window.pendingMoveCode)return;
+  currentArea=a;currentBlock=1;renderAll();
+  $("moveBanner").classList.remove("hidden");
+  $("moveBannerText").textContent=`Destino: área ${a}. Agora toque no bloco desejado abaixo.`;
+  $("blockHeading").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function chooseMoveBlock(b){
+  const code=window.pendingMoveCode;if(!code)return;
+  const c=getCode(code);if(!c)return;
+  currentBlock=Number(b);renderAll();
+  $("moveBanner").classList.remove("hidden");
+  $("moveBannerText").textContent=`Destino: ${currentArea}, bloco ${currentBlock}. Toque numa altura vazia para concluir a movimentação.`;
+  $("pileHeading").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function finishMoveAt(level){
+  const code=window.pendingMoveCode;const c=getCode(code);if(!c)return;
+  const b=currentBlock, a=currentArea, l=Number(level);
+  if(!free(a,b,l)){alert("Destino ocupado ou reservado por uma pendência. Escolha uma altura vazia.");return}
+  const from=loc(c.area,c.block,c.level),to=loc(a,b,l);
+  if(!confirm(`Mover ${c.code}?\nDe: ${from}\nPara: ${to}`))return;
+  c.area=a;c.block=b;c.level=l;log("Movimentação",c.code,from,to);window.pendingMoveCode=null;
+  $("moveBanner").classList.add("hidden");save();
+}
+function makePending(c){
+  if(!confirm(`Marcar ${c.code} como pendente?\nA marca vermelha ficará na posição de origem e o espaço ficará livre para novo cadastro.`))return;
+  const from=loc(c.area,c.block,c.level),stamp=now();
+  state.pending.push({code:c.code,area:c.area,block:Number(c.block),level:Number(c.level),from,at:stamp,status:"Aberta"});
+  state.containers=state.containers.filter(x=>x.code.toLowerCase()!==c.code.toLowerCase());
+  log("Pendente",c.code,from,"Pendente","Pendente aberta; posição de origem liberada");
+  save();
+  alert(`${c.code} foi marcado como pendente.\nConfira a tela Pendentes e a marca vermelha na área ${c.area}, bloco ${c.block}, altura ${c.level}.`);
+}
+function pendingActions(code){const p=state.pending.find(x=>x.code===code);if(!p)return;const choice=prompt(`Pendente: ${p.code}\nOrigem: ${p.from}\nDigite 1 para definir posição final; Cancelar para manter pendente.`);if(choice!=="1")return;const a=prompt("Área de destino:\n"+AREAS.join(", "),p.area);if(!AREAS.includes((a||"").toUpperCase()))return alert("Área inválida.");const b=Number(prompt("Bloco de destino (1 a 15):","1"));if(!Number.isInteger(b)||b<1||b>15)return alert("Bloco inválido.");const l=Number(prompt(`Altura de destino (1 a ${cap(b)}):`,"1"));if(!Number.isInteger(l)||l<1||l>cap(b))return alert("Altura inválida.");if(!free(a.toUpperCase(),b,l))return alert("Destino ocupado ou reservado por outra pendência.");if(!confirm(`Colocar ${p.code} em ${loc(a.toUpperCase(),b,l)}?`))return;state.containers.push({code:p.code,area:a.toUpperCase(),block:b,level:l,createdAt:p.at});state.pending=state.pending.filter(x=>x.code!==code);log("Pendência resolvida",code,p.from,loc(a.toUpperCase(),b,l));save()}
+function nextFreeLocation(area, preferredBlock=1){
+  // Sugere o primeiro espaço livre, procurando bloco por bloco e preenchendo de baixo para cima.
+  const order=[...Array.from({length:15},(_,i)=>i+1)].sort((a,b)=>{
+    if(a===preferredBlock)return -1;if(b===preferredBlock)return 1;return a-b;
+  });
+  for(const b of order){
+    for(let l=1;l<=cap(b);l++){
+      if(free(area,b,l))return {area,block:b,level:l};
+    }
+  }
+  return null;
+}
+function fillEntryBlocks(selected=1){setOptions($("entryBlock"),Array.from({length:15},(_,i)=>i+1),selected);fillEntryLevels(1)}
+function fillEntryLevels(selected=1){let b=Number($("entryBlock").value||1);setOptions($("entryLevel"),Array.from({length:cap(b)},(_,i)=>i+1),selected)}
+function selectEntryArea(area){
+  $("entryArea").value=area;currentEntryArea=area;currentEntryBlock=1;
+  fillEntryBlocks(1);suggestEntryLocation(1);renderEntryMap();renderEntryBlocks();renderEntryPile();
+}
+let currentEntryArea="E1",currentEntryBlock=1,currentEntryLevel=null;
+function suggestEntryLocation(preferredBlock=1){
+  const area=currentEntryArea||$("entryArea").value||"E1";
+  const locn=nextFreeLocation(area,preferredBlock);
+  if(!locn){currentEntryLevel=null;$("entryMessage").innerHTML='<div class="result">Não há níveis livres nos 15 blocos desta área.</div>';renderEntryPile();return}
+  currentEntryBlock=locn.block;currentEntryLevel=locn.level;
+  $("entryArea").value=area;$("entryBlock").value=String(locn.block);fillEntryLevels(locn.level);$("entryLevel").value=String(locn.level);
+  $("entryMessage").innerHTML=`<div class="result">Sugestão: <strong>${loc(area,locn.block,locn.level)}</strong>. Toque em outra altura livre se preferir.</div>`;
+}
+function renderEntryMap(){
+  const group=(cls,arr)=>`<div class="yard-side ${cls}">${arr.map(a=>`<button class="yard-area ${a===currentEntryArea?"active":""}" data-entry-area="${a}">${a}</button>`).join("")}</div>`;
+  $("entryMap").innerHTML=group("left",["EV6","EV5","E4","E3","E2","E1"])+
+    `<div class="yard-side back">${["F1","F2"].map(a=>`<button class="yard-area ${a===currentEntryArea?"active":""}" data-entry-area="${a}">${a}</button>`).join("")}</div>`+
+    group("right",["D2","D1","DV3","DV2","DV1"])+
+    `<div class="yard-center">Área central do pátio</div><div class="yard-gate">PORTÃO</div>`;
+  $("entryMap").querySelectorAll("[data-entry-area]").forEach(b=>b.onclick=()=>selectEntryArea(b.dataset.entryArea));
+}
+function renderEntryBlocks(){
+  $("entryBlocksHeading").textContent=`3. Escolha um bloco de ${currentEntryArea}`;
+  $("entryBlockGrid").innerHTML=Array.from({length:15},(_,i)=>i+1).map(b=>{
+    const count=state.containers.filter(c=>c.area===currentEntryArea&&Number(c.block)===b).length;
+    return `<button class="block-btn ${b===currentEntryBlock?"selected":""}" data-entry-block="${b}"><strong>Bloco ${b}</strong><span class="count">${count} container(es)</span><span class="count">Máx. ${cap(b)} alto</span></button>`;
+  }).join("");
+  $("entryBlockGrid").querySelectorAll("[data-entry-block]").forEach(b=>b.onclick=()=>{
+    currentEntryBlock=Number(b.dataset.entryBlock);$("entryBlock").value=String(currentEntryBlock);suggestEntryLocation(currentEntryBlock);renderEntryBlocks();renderEntryPile();
+  });
+}
+function renderEntryPile(){
+  $("entryPileHeading").textContent=`4. ${currentEntryArea} · Bloco ${currentEntryBlock}: escolha a altura`;
+  $("entrySelection").innerHTML=`Área selecionada: <strong>${currentEntryArea}</strong> · Bloco <strong>${currentEntryBlock}</strong>`;
+  let html="";
+  for(let n=cap(currentEntryBlock);n>=1;n--){
+    const c=at(currentEntryArea,currentEntryBlock,n),pending=state.pending.find(x=>x.area===currentEntryArea&&Number(x.block)===currentEntryBlock&&Number(x.level)===n),hole=!c&&!pending&&hasContainerAbove(currentEntryArea,currentEntryBlock,n);
+    if(c) html+=`<button class="level occupied" data-entry-occupied="${n}"><span class="num">${n}</span><span class="info"><span class="code">${esc(c.code)}</span><br><span class="sub">Ocupado · toque para ver ações</span></span></button>`;
+    else if(pending) html+=`<button class="level pending" disabled><span class="num">${n}</span><span class="info"><span class="code">🔴 ${esc(pending.code)}</span><br><span class="sub">Reservado por pendência</span></span></button>`;
+    else if(hole) html+=`<button class="level hole ${currentEntryLevel===n?"selected":""}" data-entry-level="${n}"><span class="num">${n}</span><span class="info"><span class="code">🔴 Espaço vazio abaixo de container</span><br><span class="sub">Toque para ver sugestão de reorganização</span></span></button>`;
+    else html+=`<button class="level ${currentEntryLevel===n?"selected":""}" data-entry-level="${n}"><span class="num">${n}</span><span class="info"><span class="code">${currentEntryLevel===n?"✓ Selecionado":"Vazio"}</span><br><span class="sub">${currentEntryLevel===n?"Posição escolhida":"Toque para escolher esta altura"}</span></span></button>`;
+  }
+  $("entryPile").innerHTML=html;
+  $("entryPile").querySelectorAll("[data-entry-occupied]").forEach(b=>b.onclick=()=>{
+    const n=Number(b.dataset.entryOccupied),c=at(currentEntryArea,currentEntryBlock,n);
+    $("entryMessage").innerHTML=`<div class="result"><strong>${esc(c?.code||"Container")}</strong><p>Essa altura está ocupada. Para reorganizar manualmente, volte ao Mapa, toque no container e escolha Mover. Para entrada assistida, toque numa posição vazia marcada em vermelho.</p></div>`;
+  });
+  $("entryPile").querySelectorAll("[data-entry-level]").forEach(b=>b.onclick=()=>{
+    currentEntryLevel=Number(b.dataset.entryLevel);$("entryLevel").value=String(currentEntryLevel);$("entryBlock").value=String(currentEntryBlock);
+    const above=state.containers.filter(c=>c.area===currentEntryArea&&Number(c.block)===Number(currentEntryBlock)&&Number(c.level)>currentEntryLevel).sort((a,b)=>Number(a.level)-Number(b.level));
+    if(above.length){
+      const plan=above.map(c=>`${esc(c.code)}: altura ${c.level} → ${Number(c.level)-1}`).join("<br>");
+      $("entryMessage").innerHTML=`<div class="result" style="border-left:5px solid #c62828;background:#fff5f5"><strong>🔴 Sugestão para reorganizar a pilha inteira</strong><p>Você escolheu ${loc(currentEntryArea,currentEntryBlock,currentEntryLevel)}. Para preencher o espaço vazio, todos os containers acima descem um nível:<br>${plan}<br>O novo container será colocado na altura ${Math.max(...above.map(c=>Number(c.level)))}.</p></div>`;
+    } else {
+      $("entryMessage").innerHTML=`<div class="result">Posição escolhida: <strong>${loc(currentEntryArea,currentEntryBlock,currentEntryLevel)}</strong></div>`;
+    }
+    renderEntryPile();
+  });
+}
+function setupEntry(){
+  const area=$("entryArea").value||currentEntryArea||"E1";
+  setOptions($("entryArea"),AREAS,area);fillEntryBlocks(currentEntryBlock||1);
+  renderEntryMap();renderEntryBlocks();renderEntryPile();
+  if(currentEntryLevel===null)suggestEntryLocation(currentEntryBlock||1);
+}
+function renderSearch(){const q=$("searchCode").value.trim().toLowerCase();if(!q){$("searchResults").innerHTML='<div class="empty">Digite um código ou parte dele.</div>';return}const found=state.containers.filter(c=>c.code.toLowerCase().includes(q));const pend=state.pending.filter(c=>c.code.toLowerCase().includes(q));const exited=state.events.filter(e=>e.type==="Saída"&&e.code.toLowerCase().includes(q)).slice().reverse();let out="";found.forEach(c=>out+=`<div class="result"><strong>${esc(c.code)}</strong><span class="pill">No pátio</span><p>${loc(c.area,c.block,c.level)}</p><button class="small" onclick="containerActions('${esc(c.code)}')">Ações</button></div>`);pend.forEach(p=>out+=`<div class="result"><strong>${esc(p.code)}</strong><span class="pill red">Pendente</span><p>Origem: ${esc(p.from)}</p><button class="small" onclick="pendingActions('${esc(p.code)}')">Resolver pendência</button></div>`);exited.forEach(e=>out+=`<div class="result"><strong>${esc(e.code)}</strong><span class="pill">Saiu</span><p>${dateLocal(e.at)}<br>Origem: ${esc(e.from)}<br>${esc(e.details||"")}</p></div>`);$("searchResults").innerHTML=out||'<div class="empty">Nenhum resultado encontrado.</div>'}
+
+function renderContainerList(){
+  const q=($("listFilter")?.value||"").trim().toLowerCase();
+  const items=state.containers.filter(c=>!q||c.code.toLowerCase().includes(q)||c.area.toLowerCase().includes(q));
+  items.sort((a,b)=>a.area.localeCompare(b.area)||Number(a.block)-Number(b.block)||Number(a.level)-Number(b.level));
+  let html=`<p><strong>${items.length}</strong> container(s) no pátio</p>`;
+  if(!items.length)html+='<div class="empty">Nenhum container encontrado com esse filtro.</div>';
+  else{
+    html+='<div class="result"><strong>Código</strong><br><span class="note">Área · Bloco · Altura</span></div>';
+    items.forEach(c=>html+=`<div class="result"><strong>${esc(c.code)}</strong><p>${esc(c.area)} · Bloco ${c.block} · Altura ${c.level}</p></div>`);
+  }
+  $("containerList").innerHTML=html;
+}
+function exportListCsv(){
+  const q=($("listFilter").value||"").trim().toLowerCase();
+  const items=state.containers.filter(c=>!q||c.code.toLowerCase().includes(q)||c.area.toLowerCase().includes(q));
+  items.sort((a,b)=>a.area.localeCompare(b.area)||Number(a.block)-Number(b.block)||Number(a.level)-Number(b.level));
+  const rows=[["Código","Área","Bloco","Altura"],...items.map(c=>[c.code,c.area,c.block,c.level])];
+  const csv=rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n");
+  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="listagem-containers-patio.csv";a.click();URL.revokeObjectURL(url);
+}
+
+function renderPending(){
+  $("pendingCount").textContent=state.pending.length?`(${state.pending.length})`:"";
+  $("pendingList").innerHTML=state.pending.length?state.pending.map(p=>`<div class="result" style="border-left:5px solid #c62828;background:#fff5f5"><strong style="color:#b42332">🔴 PENDENTE · ${esc(p.code)}</strong><p>Localização marcada: ${esc(p.from)}<br>Status: Aguardando posição definitiva<br>Desde: ${dateLocal(p.at)}</p><button class="primary" style="width:100%" onclick="pendingActions('${esc(p.code)}')">Definir posição final</button></div>`).join(""):'<div class="empty">Nenhum container pendente.</div>';
+}
+function localDateKey(iso){
+  const d=new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function renderReport(){
+  const date=$("reportDate").value;if(!date)return;
+  const type=$("reportType").value;
+  const ev=state.events.filter(e=>localDateKey(e.at)===date).slice().reverse();
+  const labels={"Saída":"Saídas","Movimentação":"Movimentações","Entrada":"Entradas","Pendente":"Containers retirados / pendentes","Pendência resolvida":"Pendências resolvidas"};
+  const filtered=type==="Todos"?ev:ev.filter(e=>e.type===type);
+  let html=`<p><strong>${date}</strong> · ${labels[type]||"Relatório completo"} · ${filtered.length} registro(s)</p>`;
+  if(type==="Todos"){
+    html+=`<div class="result"><strong>Resumo do dia</strong><p>Entradas: ${ev.filter(e=>e.type==="Entrada").length}<br>Movimentações: ${ev.filter(e=>e.type==="Movimentação").length}<br>Pendências abertas agora: ${state.pending.length}<br>Pendências resolvidas: ${ev.filter(e=>e.type==="Pendência resolvida").length}<br>Saídas: ${ev.filter(e=>e.type==="Saída").length}</p></div>`;
+  }
+  if(type==="Pendente"){
+    html+=`<div class="result" style="border-left:5px solid #c62828"><strong>Pendências abertas agora: ${state.pending.length}</strong><p>Esta lista mostra os containers que continuam pendentes, mesmo que tenham sido retirados em outro dia.</p></div>`;
+    state.pending.forEach(p=>html+=`<div class="result" style="border-left:5px solid #c62828;background:#fff5f5"><strong>🔴 ${esc(p.code)}</strong><p>Origem: ${esc(p.from)}<br>Desde: ${dateLocal(p.at)}<br>Status: Aguardando posição definitiva</p></div>`);
+  }
+  if(!filtered.length && !(type==="Pendente"&&state.pending.length)) html+='<div class="empty">Nenhum registro deste tipo nesta data.</div>';
+  filtered.forEach(e=>html+=`<div class="result"><strong>${esc(e.code)}</strong><p>${dateLocal(e.at)}<br>Origem: ${esc(e.from||"")}<br>Destino: ${esc(e.to||"")}<br>${esc(e.details||"")}</p></div>`);
+  $("reportOutput").innerHTML=html;
+}
+function exportReportCsv(){
+  const date=$("reportDate").value;
+  const type=$("reportType").value;
+  if(!date)return alert("Escolha uma data para exportar.");
+  const ev=state.events.filter(e=>localDateKey(e.at)===date && (type==="Todos"||e.type===type)).slice().reverse();
+  const rows=[["Tipo","Código","Data e hora","Origem","Destino","Detalhes"],...ev.map(e=>[e.type,e.code,dateLocal(e.at),e.from||"",e.to||"",e.details||""])];
+  const csv=rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n");
+  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`relatorio-patio-${date}-${type.toLowerCase().replaceAll(" ","-")}.csv`;a.click();URL.revokeObjectURL(url);
+}
+function setupCleanup(){
+ const sel=$("clearArea");
+ if(!sel.options.length) sel.innerHTML=AREAS.map(a=>`<option value="${a}">${a}</option>`).join("");
+ updateCleanupSummary();
+}
+function updateCleanupSummary(){
+ const area=$("clearArea").value||AREAS[0];
+ const active=state.containers.filter(c=>c.area===area).length;
+ const pending=state.pending.filter(p=>p.area===area).length;
+ $("clearAreaSummary").innerHTML=`<strong>${area}</strong>: ${active} container(es) ativo(s), ${pending} pendência(s).`;
+ $("clearAllSummary").innerHTML=`No pátio inteiro: <strong>${state.containers.length}</strong> container(es) ativo(s), <strong>${state.pending.length}</strong> pendência(s) e <strong>${state.events.length}</strong> registro(s) no histórico.`;
+}
+$("clearArea").addEventListener("change",updateCleanupSummary);
+$("clearAreaBtn").onclick=()=>{
+ const area=$("clearArea").value;
+ const active=state.containers.filter(c=>c.area===area).length;
+ const pending=state.pending.filter(p=>p.area===area).length;
+ if(!active&&!pending){alert(`A área ${area} já está vazia.`);return}
+ if(!confirm(`ATENÇÃO: apagar ${active} container(es) ativo(s) e ${pending} pendência(s) da área ${area}? O histórico será mantido. Exporte um backup antes de continuar.`))return;
+ const typed=prompt(`Para confirmar, digite LIMPAR ${area}`);
+ if(typed!==`LIMPAR ${area}`){alert("Cancelado. Nenhum dado foi apagado.");return}
+ state.containers=state.containers.filter(c=>c.area!==area);
+ state.pending=state.pending.filter(p=>p.area!==area);
+ save();
+ updateCleanupSummary();
+ alert(`Área ${area} limpa. O histórico foi mantido.`);
+};
+$("clearAllBtn").onclick=()=>{
+ if(!confirm("APAGAR TODO O PÁTIO? Isso remove todos os containers, todas as pendências e todo o histórico de eventos. Esta ação não pode ser desfeita. Exporte um backup JSON antes."))return;
+ const typed=prompt('Para confirmar a limpeza total, digite APAGAR TUDO');
+ if(typed!=="APAGAR TUDO"){alert("Cancelado. Nenhum dado foi apagado.");return}
+ state={containers:[],events:[],pending:[]};
+ save();
+ updateCleanupSummary();
+ alert("Pátio limpo. Todos os registros locais foram removidos.");
+};
+function renderAll(){renderAreas();renderBlocks();renderPile();renderPending();renderSearch();setupEntry();setupCleanup();if(!$("reportDate").value)$("reportDate").value=new Date().toISOString().slice(0,10)}
+function showPage(page){document.querySelectorAll("main section").forEach(s=>s.classList.add("hidden"));$("page-"+page).classList.remove("hidden");document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("selected",b.dataset.page===page));if(page==="pesquisa")renderSearch();if(page==="pendentes")renderPending();if(page==="relatorio")renderReport();if(page==="listagem")renderContainerList();if(page==="limpeza")setupCleanup();if(page==="entrada"){setupEntry();suggestEntryLocation(currentEntryBlock||1);renderEntryBlocks();renderEntryPile()}}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+$("cancelMove").onclick=()=>{window.pendingMoveCode=null;$("moveBanner").classList.add("hidden");renderAll()};
+$("saveEntry").onclick=()=>{
+ const code=$("newCode").value.trim(),area=currentEntryArea,block=Number(currentEntryBlock),level=Number(currentEntryLevel);
+ if(!code){$("entryMessage").innerHTML='<p class="note" style="color:#b42332">Digite o código do container.</p>';return}
+ if(!level){$("entryMessage").innerHTML='<p class="note" style="color:#b42332">Toque numa altura livre no desenho da pilha.</p>';return}
+ const duplicate=state.containers.find(c=>c.code.toLowerCase()===code.toLowerCase())||state.pending.find(c=>c.code.toLowerCase()===code.toLowerCase());
+ if(duplicate){$("entryMessage").innerHTML=`<div class="result">Código já cadastrado. Localização: ${duplicate.area?loc(duplicate.area,duplicate.block,duplicate.level):"Pendente: "+duplicate.from}</div>`;return}
+ if(at(area,block,level)||state.pending.some(p=>p.area===area&&Number(p.block)===block&&Number(p.level)===level)){
+   $("entryMessage").innerHTML=`<div class="result">A posição ${loc(area,block,level)} está ocupada ou reservada. Toque numa posição livre.</div>`;return;
+ }
+ const above=state.containers.filter(c=>c.area===area&&Number(c.block)===block&&Number(c.level)>level).sort((a,b)=>Number(a.level)-Number(b.level));
+ const max=cap(block);
+ if(above.some(c=>Number(c.level)-1<1)){
+   $("entryMessage").innerHTML='<div class="result">Não foi possível calcular a reorganização. Confira as alturas da pilha.</div>';return;
+ }
+ const highest=above.length?Math.max(...above.map(c=>Number(c.level))):level;
+ if(above.length&&highest>max){
+   $("entryMessage").innerHTML='<div class="result">A pilha excede a altura permitida. Não é possível reorganizar automaticamente.</div>';return;
+ }
+ let confirmText=`Cadastrar ${code} em ${loc(area,block,above.length?highest:level)}?`;
+ if(above.length){
+   confirmText+=`\n\nReorganização completa da pilha:`;
+   above.slice().sort((a,b)=>Number(b.level)-Number(a.level)).forEach(c=>confirmText+=`\n${c.code}: altura ${c.level} → ${Number(c.level)-1}`);
+   confirmText+=`\n${code}: nova altura ${highest}`;
+   confirmText+="\n\nConfirme somente se você realmente fará essas movimentações físicas no pátio.";
+ }
+ if(!confirm(confirmText))return;
+ // Shift all containers above the hole down exactly one level, from top to bottom.
+ above.slice().sort((a,b)=>Number(b.level)-Number(a.level)).forEach(c=>{
+   const oldLevel=Number(c.level),newLevel=oldLevel-1;
+   c.level=newLevel;
+   log("Movimentação",c.code,loc(area,block,oldLevel),loc(area,block,newLevel),"Reorganização completa da pilha durante entrada");
+ });
+ const newLevel=above.length?highest:level;
+ state.containers.push({code,area,block,level:newLevel,createdAt:now()});
+ log("Entrada",code,"",loc(area,block,newLevel),above.length?"Entrada com reorganização completa da pilha":"");
+ save();
+ $("newCode").value="";currentEntryLevel=null;$("entryMessage").innerHTML='<p style="color:#176b4d">Entrada registrada. A pilha foi atualizada conforme a reorganização confirmada.</p>';
+ currentArea=area;currentBlock=block;showPage("mapa");renderAll();
+};
+
+let preparedVoiceEntry=null;
+function findFirstFreePosition(area){
+ for(let block=1;block<=15;block++){
+  const max=cap(block);
+  for(let level=1;level<=max;level++){
+   if(!at(area,block,level)&&!state.pending.some(x=>x.area===area&&Number(x.block)===block&&Number(x.level)===level)){
+    // Only append to the top of a stack; do not create unsupported holes.
+    const stack=state.containers.filter(x=>x.area===area&&Number(x.block)===block);
+    const highest=stack.length?Math.max(...stack.map(x=>Number(x.level))):0;
+    if(level===highest+1)return {area,block,level};
+   }
+  }
+ }
+ return null;
+}
+function parseVoiceEntry(raw){
+ const norm=normalizeVoiceText(raw).toUpperCase();
+ const compact=norm.replace(/[^A-Z0-9]/g,"");
+ let code="";
+ const m=compact.match(/([A-Z]{4})([0-9]{7})/);
+ if(m)code=m[1]+m[2];
+ const areaMatch=norm.match(/\b(EV6|EV5|E4|E3|E2|E1|F1|F2|D2|D1|DV3|DV2|DV1)\b/);
+ return {code,area:areaMatch?areaMatch[1]:""};
+}
+$("startVoiceEntry").onclick=()=>{
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){$("voiceEntryStatus").textContent="Este navegador não oferece reconhecimento de voz. Digite ou corrija o comando abaixo.";return;}
+ const rec=new SR();rec.lang="pt-BR";rec.interimResults=false;rec.maxAlternatives=3;
+ $("voiceEntryStatus").textContent="Ouvindo... diga “adicionar container”, o código e a área.";
+ rec.onresult=e=>{$("voiceEntryTranscript").value=e.results[0][0].transcript;$("voiceEntryStatus").textContent="Reconhecido: "+e.results[0][0].transcript;prepareVoiceEntry();};
+ rec.onerror=e=>{$("voiceEntryStatus").textContent="Não consegui reconhecer a fala ("+e.error+"). Você pode tentar novamente ou corrigir o texto.";};
+ try{rec.start()}catch(e){$("voiceEntryStatus").textContent="Não foi possível iniciar o microfone. Confira a permissão do navegador."}
+};
+function prepareVoiceEntry(){
+ const raw=$("voiceEntryTranscript").value.trim();
+ if(!raw){alert("Fale ou digite o comando primeiro.");return;}
+ const f=parseVoiceEntry(raw);
+ if(!f.code||!f.area){
+  $("voiceEntryPreview").classList.remove("hidden");
+  $("voiceEntryPreview").innerHTML="<strong>Não identifiquei o código completo e a área.</strong><p>Confira o texto para conter as 4 letras, os 7 números do código e uma área como F1.</p>";
+  $("confirmVoiceEntry").classList.add("hidden");return;
+ }
+ const duplicate=state.containers.find(c=>c.code.toLowerCase()===f.code.toLowerCase())||state.pending.find(c=>c.code.toLowerCase()===f.code.toLowerCase());
+ if(duplicate){
+  $("voiceEntryPreview").classList.remove("hidden");
+  $("voiceEntryPreview").innerHTML=`<strong>${f.code} já está cadastrado.</strong><p>Localização: ${duplicate.area?loc(duplicate.area,duplicate.block,duplicate.level):"pendente"}. Nenhuma alteração foi feita.</p>`;
+  $("confirmVoiceEntry").classList.add("hidden");return;
+ }
+ const pos=findFirstFreePosition(f.area);
+ if(!pos){
+  $("voiceEntryPreview").classList.remove("hidden");$("voiceEntryPreview").innerHTML=`<strong>Não encontrei posição livre na área ${f.area}.</strong><p>Nenhum dado foi alterado.</p>`;$("confirmVoiceEntry").classList.add("hidden");return;
+ }
+ preparedVoiceEntry={code:f.code,...pos};
+ $("voiceEntryPreview").classList.remove("hidden");
+ $("voiceEntryPreview").innerHTML=`<strong>Confira antes de cadastrar</strong><p><b>Código:</b> ${f.code}</p><p><b>Posição sugerida:</b> ${loc(pos.area,pos.block,pos.level)}</p><p>O sistema vai usar a primeira posição livre que possa ser preenchida sem deixar buracos na pilha.</p>`;
+ $("confirmVoiceEntry").classList.remove("hidden");
+}
+$("prepareVoiceEntry").onclick=prepareVoiceEntry;
+$("confirmVoiceEntry").onclick=()=>{
+ if(!preparedVoiceEntry)return;
+ const {code,area,block,level}=preparedVoiceEntry;
+ if(state.containers.some(c=>c.code.toLowerCase()===code.toLowerCase())||state.pending.some(c=>c.code.toLowerCase()===code.toLowerCase())){alert("Esse código já foi cadastrado. Nenhuma alteração foi feita.");return;}
+ if(at(area,block,level)){alert("A posição sugerida acabou de ser ocupada. Prepare novamente.");return;}
+ state.containers.push({code,area,block,level,createdAt:now()});
+ log("Entrada",code,"",loc(area,block,level),"Entrada por comando de voz confirmado");
+ save();$("voiceEntryStatus").textContent=`Entrada confirmada: ${code} em ${loc(area,block,level)}.`;
+ $("voiceEntryTranscript").value="";$("voiceEntryPreview").classList.add("hidden");$("confirmVoiceEntry").classList.add("hidden");preparedVoiceEntry=null;
+ currentArea=area;currentBlock=block;showPage("mapa");renderAll();
+};
+
+$("searchCode").addEventListener("input",renderSearch);
+$("listFilter").addEventListener("input",renderContainerList);
+$("printList").onclick=()=>window.print();
+$("exportList").onclick=exportListCsv;
+function normalizeVoiceText(s){return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim()}
+function extractVoiceFields(raw){
+ const normalized=normalizeVoiceText(raw).toUpperCase();
+ const compact=normalized.replace(/[^A-Z0-9]/g,"");
+ const matches=[...normalized.matchAll(/\b([A-Z]{4})[\s-]*([0-9]{6})[\s-]*([0-9])\b/g)];
+ let code="";
+ if(matches.length) code=matches[0][1]+matches[0][2]+matches[0][3];
+ else {const m=compact.match(/([A-Z]{4})([0-9]{7})/);if(m)code=m[1]+m[2];}
+ let plate="";
+ const pm=normalized.match(/\bPLACA\s+(?:DO CAMINHAO\s+)?([A-Z0-9 -]{6,10})/);
+ if(pm) plate=pm[1].trim().replace(/\s+/g,"").replace(/[^A-Z0-9]/g,"");
+ let dest="";
+ const dm=raw.match(/\bdestino\s+(.+?)(?=,?\s+placa\b|$)/i);
+ if(dm) dest=dm[1].replace(/[,.]$/,"").trim();
+ else {const known=raw.match(/\b(S[aã]o Paulo|Joinville|Curitiba|Santos|Matriz)\b/i);if(known)dest=known[1];}
+ return {code,plate,dest};
+}
+let preparedVoiceExit=null;
+$("startVoiceExit").onclick=()=>{
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){$("voiceStatus").textContent="Este navegador não oferece reconhecimento de voz. Você pode digitar o comando no campo abaixo e tocar em Preparar confirmação.";return;}
+ const rec=new SR();rec.lang="pt-BR";rec.interimResults=false;rec.maxAlternatives=3;
+ $("voiceStatus").textContent="Ouvindo... fale o código, diga “carregado” e, se quiser, acrescente destino e placa.";
+ rec.onresult=e=>{$("voiceTranscript").value=e.results[0][0].transcript;$("voiceStatus").textContent="Reconhecido: "+e.results[0][0].transcript;prepareVoiceExit();};
+ rec.onerror=e=>{$("voiceStatus").textContent="Não consegui reconhecer a fala ("+e.error+"). Tente novamente ou digite o comando.";};
+ try{rec.start()}catch(e){$("voiceStatus").textContent="Não foi possível iniciar o microfone. Confira a permissão do navegador."}
+};
+function prepareVoiceExit(){
+ const raw=$("voiceTranscript").value.trim();
+ if(!raw){alert("Fale ou digite o comando primeiro.");return;}
+ const fields=extractVoiceFields(raw);
+ if(!fields.code){$("voicePreview").classList.remove("hidden");$("voicePreview").innerHTML="<strong>Não consegui identificar com segurança o código completo.</strong><p>Corrija o texto reconhecido para conter as 4 letras e os 7 números do container e toque em Preparar confirmação novamente.</p>";$("confirmVoiceExit").classList.add("hidden");return;}
+ const c=getCode(fields.code);
+ if(!c){$("voicePreview").classList.remove("hidden");$("voicePreview").innerHTML=`<strong>Container ${fields.code} não encontrado no pátio.</strong><p>Confira o código reconhecido. Nenhuma alteração foi feita.</p>`;$("confirmVoiceExit").classList.add("hidden");return;}
+ preparedVoiceExit={code:c.code,plate:fields.plate,dest:fields.dest};
+ $("voicePreview").classList.remove("hidden");
+ $("voicePreview").innerHTML=`<strong>Confirme o carregamento</strong><p><b>Container:</b> ${c.code}</p><p><b>Origem:</b> ${loc(c.area,c.block,c.level)}</p><p><b>Destino:</b> ${fields.dest||"não informado"}</p><p><b>Placa:</b> ${fields.plate||"não informada"}</p><p class="note">O container só será retirado da posição depois que você tocar em “Confirmar carregamento”.</p>`;
+ $("confirmVoiceExit").classList.remove("hidden");
+}
+$("prepareVoiceExit").onclick=prepareVoiceExit;
+$("confirmVoiceExit").onclick=()=>{
+ if(!preparedVoiceExit)return;
+ const c=getCode(preparedVoiceExit.code);
+ if(!c){alert("O container já não está no pátio. Pesquise novamente.");return;}
+ const from=loc(c.area,c.block,c.level),plate=preparedVoiceExit.plate,dest=preparedVoiceExit.dest;
+ state.containers=state.containers.filter(x=>x.code.toLowerCase()!==c.code.toLowerCase());
+ log("Saída",c.code,from,"Fora do pátio",`Placa: ${plate||"não informada"}; Destino: ${dest||"não informado"}`);
+ save();$("voiceStatus").textContent=`Carregamento confirmado: ${c.code}.`;$("voiceTranscript").value="";$("voicePreview").classList.add("hidden");$("confirmVoiceExit").classList.add("hidden");preparedVoiceExit=null;
+};
+$("doExit").onclick=()=>{
+ const code=$("exitCode").value.trim(),plate=$("truckPlate").value.trim(),dest=$("destination").value.trim();
+ if(!code)return alert("Digite o código do container.");
+ const c=getCode(code);
+ if(!c)return alert("Container não encontrado no pátio. Confira o código ou consulte a pesquisa.");
+ const from=loc(c.area,c.block,c.level);
+ if(!confirm(`Confirmar carregamento de ${c.code}?\nOrigem: ${from}\nPlaca: ${plate||"não informada"}\nDestino: ${dest||"não informado"}`))return;
+ state.containers=state.containers.filter(x=>x.code.toLowerCase()!==code.toLowerCase());
+ log("Saída",c.code,from,"Fora do pátio",`Placa: ${plate||"não informada"}; Destino: ${dest||"não informado"}`);
+ save();$("exitMessage").innerHTML='<p style="color:#176b4d">Saída registrada.</p>';$("exitCode").value="";$("truckPlate").value="";$("destination").value="";
+};
+$("showReport").onclick=renderReport;
+$("reportType").onchange=renderReport;
+$("exportReport").onclick=exportReportCsv;
+$("exportData").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="backup-controle-patio.json";a.click();URL.revokeObjectURL(url)};
+load();renderAll();
+</script>
+</body></html>
