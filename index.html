@@ -49,7 +49,7 @@ footer{position:fixed;bottom:0;left:0;right:0;background:#ffffffed;border-top:1p
 </style>
 </head>
 <body>
-<header><h1>📦 Controle do Pátio</h1><p>Versão de teste 7 · carregamento por voz com confirmação</p></header>
+<header><h1>📦 Controle do Pátio</h1><p>Versão de teste 9 · voz com correção de código e área</p></header>
 <main>
 <div class="warning"><strong>Atenção:</strong> esta versão salva os dados localmente neste aparelho/navegador. Não limpe os dados do navegador nem desinstale o ambiente sem exportar uma cópia. Ainda não é um sistema publicado nem sincronizado.</div>
 <nav class="nav" aria-label="Menu principal">
@@ -68,8 +68,9 @@ footer{position:fixed;bottom:0;left:0;right:0;background:#ffffffed;border-top:1p
 <div class="panel"><h2>Entrada de container</h2>
 <p class="note">Você pode falar o código e a área. O sistema sugere a primeira posição livre seguindo a ordem dos boxes e suas alturas programadas, e pede confirmação antes de cadastrar.</p>
 <button class="primary" id="startVoiceEntry" style="width:100%;margin-bottom:10px">🎙️ Falar entrada</button>
-<div id="voiceEntryStatus" class="result" aria-live="polite">Exemplo: “Adicionar container FWRU 0354947, posição F1”.</div>
-<div class="field"><label for="voiceEntryTranscript">Texto reconhecido (corrija se necessário)</label><input id="voiceEntryTranscript" placeholder="O texto reconhecido aparecerá aqui"></div>
+<div id="voiceEntryStatus" class="result" aria-live="polite">Exemplo: “Adicionar container FWRU 0354947, posição F1”. Se a voz não entender a área, você poderá escolhê-la na lista.</div>
+<div class="field"><label for="voiceEntryTranscript">Texto reconhecido (corrija se necessário)</label><input id="voiceEntryTranscript" autocomplete="off" placeholder="O texto reconhecido aparecerá aqui"></div>
+<div class="field"><label for="voiceEntryAreaFallback">Área do container (use se a voz não reconhecer)</label><select id="voiceEntryAreaFallback"><option value="">Escolher área...</option></select></div>
 <button id="prepareVoiceEntry" style="width:100%;margin-bottom:12px">Preparar entrada</button>
 <div id="voiceEntryPreview" class="result hidden"></div>
 <button class="primary hidden" id="confirmVoiceEntry" style="width:100%;margin-top:10px">Confirmar entrada por voz</button>
@@ -122,9 +123,11 @@ footer{position:fixed;bottom:0;left:0;right:0;background:#ffffffed;border-top:1p
 </div>
 </section>
 </main>
-<footer>Versão de teste 7 • carregamento por voz com confirmação</footer>
+<footer>Versão de teste 9 • voz com correção de código e área</footer>
 <script>
 const AREAS=["E1","E2","E3","E4","EV5","EV6","F1","F2","D1","D2","DV1","DV2","DV3"];
+const voiceAreaSelect=document.getElementById("voiceEntryAreaFallback");
+if(voiceAreaSelect)voiceAreaSelect.innerHTML='<option value="">Escolher área...</option>'+AREAS.map(a=>`<option value="${a}">${a}</option>`).join("");
 const KEY="controlePatioLocalV1";
 let state={containers:[],events:[],pending:[]};
 let currentArea="E1",currentBlock=1;
@@ -444,12 +447,34 @@ function findFirstFreePosition(area){
 }
 function parseVoiceEntry(raw){
  const norm=normalizeVoiceText(raw).toUpperCase();
+ // Remove spaces, punctuation and hyphens so spoken/recognized code groups can be joined.
  const compact=norm.replace(/[^A-Z0-9]/g,"");
  let code="";
  const m=compact.match(/([A-Z]{4})([0-9]{7})/);
  if(m)code=m[1]+m[2];
- const areaMatch=norm.match(/\b(EV6|EV5|E4|E3|E2|E1|F1|F2|D2|D1|DV3|DV2|DV1)\b/);
- return {code,area:areaMatch?areaMatch[1]:""};
+ let area="";
+ // Prefer exact yard labels, including the multi-character EV/DV areas.
+ const direct=norm.match(/\b(EV[56]|DV[123]|E[1-4]|F[12]|D[12])\b/);
+ if(direct) area=direct[1];
+ // Common Brazilian Portuguese speech-to-text variants: “efe um”, “dê dois”, “e vê cinco”.
+ if(!area){
+  const spoken=norm.replace(/[.,;:!?]/g," ").replace(/\s+/g," ");
+  const aliases=[
+   [/\b(E V 5|EVE CINCO|E VE CINCO|E V CINCO|E CINCO)\b/,'EV5'],
+   [/\b(E V 6|EVE SEIS|E VE SEIS|E V SEIS|E SEIS)\b/,'EV6'],
+   [/\b(D V 1|DE VE UM|DÊ VÊ UM|DEVE UM|DE UM V)\b/,'DV1'],
+   [/\b(D V 2|DE VE DOIS|DE VÊ DOIS|DEVE DOIS)\b/,'DV2'],
+   [/\b(D V 3|DE VE TRES|DE VÊ TRES|DEVE TRES)\b/,'DV3'],
+   [/\b(E UM|É UM|LETRA E UM)\b/,'E1'],[/\b(E DOIS|É DOIS|LETRA E DOIS)\b/,'E2'],
+   [/\b(E TRES|É TRES|LETRA E TRES)\b/,'E3'],[/\b(E QUATRO|É QUATRO|LETRA E QUATRO)\b/,'E4'],
+   [/\b(EFE UM|F UM|EFE 1)\b/,'F1'],[/\b(EFE DOIS|F DOIS|EFE 2)\b/,'F2'],
+   [/\b(DE UM|DÊ UM|D UM|DE 1)\b/,'D1'],[/\b(DE DOIS|DÊ DOIS|D DOIS|DE 2)\b/,'D2']
+  ];
+  for(const [re,val] of aliases){if(re.test(spoken)){area=val;break;}}
+ }
+ // A selected area is a safe fallback when speech recognition omits or mangles it.
+ if(!area){const fallback=$("voiceEntryAreaFallback").value;if(AREAS.includes(fallback))area=fallback;}
+ return {code,area};
 }
 $("startVoiceEntry").onclick=()=>{
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -464,9 +489,14 @@ function prepareVoiceEntry(){
  const raw=$("voiceEntryTranscript").value.trim();
  if(!raw){alert("Fale ou digite o comando primeiro.");return;}
  const f=parseVoiceEntry(raw);
- if(!f.code||!f.area){
+ if(!f.code){
   $("voiceEntryPreview").classList.remove("hidden");
-  $("voiceEntryPreview").innerHTML="<strong>Não identifiquei o código completo e a área.</strong><p>Confira o texto para conter as 4 letras, os 7 números do código e uma área como F1.</p>";
+  $("voiceEntryPreview").innerHTML="<strong>Não consegui montar o código completo.</strong><p>Confira o texto e corrija para 4 letras seguidas de 7 números. Espaços e hífens podem ser removidos automaticamente.</p>";
+  $("confirmVoiceEntry").classList.add("hidden");return;
+ }
+ if(!f.area){
+  $("voiceEntryPreview").classList.remove("hidden");
+  $("voiceEntryPreview").innerHTML=`<strong>Código reconhecido: ${f.code}</strong><p>A voz não identificou a área. Escolha a área na lista acima e toque em <b>Preparar entrada</b>. Nada foi cadastrado ainda.</p>`;
   $("confirmVoiceEntry").classList.add("hidden");return;
  }
  const duplicate=state.containers.find(c=>c.code.toLowerCase()===f.code.toLowerCase())||state.pending.find(c=>c.code.toLowerCase()===f.code.toLowerCase());
@@ -485,6 +515,7 @@ function prepareVoiceEntry(){
  $("confirmVoiceEntry").classList.remove("hidden");
 }
 $("prepareVoiceEntry").onclick=prepareVoiceEntry;
+$("voiceEntryAreaFallback").addEventListener("change",()=>{if($("voiceEntryTranscript").value.trim())prepareVoiceEntry()});
 $("confirmVoiceEntry").onclick=()=>{
  if(!preparedVoiceEntry)return;
  const {code,area,block,level}=preparedVoiceEntry;
